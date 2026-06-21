@@ -1,0 +1,7 @@
+rns
+cbor2
+websockets
+nomadnet
+
+# rrcd (the RRC chat hub daemon) is not on PyPI — install separately:
+#   pip install git+https://github.com/kc1awv/rrcd.git

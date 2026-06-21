@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Hall of Fire — Imladris</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hall of Fire">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:   #d7a93a;
+      --fire:   #e8822a;
+      --dim:    #8a8a8a;
+      --text:   #e8e8e8;
+      --bg:     #0e0c0a;
+      --bg2:    #181410;
+      --bg3:    #221e18;
+      --border: #2e2820;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Georgia', serif;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── header ── */
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    header p {
+      font-size: 0.75rem;
+      color: var(--dim);
+      margin-top: 2px;
+      font-style: italic;
+    }
+
+    #status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #555;
+      margin-right: 6px;
+      vertical-align: middle;
+      transition: background 0.3s;
+    }
+    #status-dot.connected    { background: #6dbf7a; }
+    #status-dot.connecting   { background: var(--fire); }
+    #status-dot.disconnected { background: #aa4444; }
+
+    /* ── messages ── */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .msg {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      max-width: 100%;
+    }
+
+    .msg-meta {
+      font-size: 0.7rem;
+      color: var(--dim);
+    }
+
+    .msg-nick {
+      color: var(--gold);
+      font-weight: bold;
+    }
+
+    .msg-body {
+      font-size: 0.95rem;
+      line-height: 1.45;
+      word-break: break-word;
+      color: var(--text);
+    }
+
+    .msg.own .msg-nick { color: var(--fire); }
+    .msg.own .msg-body { color: #c8c0b0; }
+
+    .msg.notice .msg-body {
+      color: var(--dim);
+      font-style: italic;
+      font-size: 0.85rem;
+    }
+
+    .msg.status .msg-body {
+      color: var(--fire);
+      font-size: 0.8rem;
+      font-style: italic;
+      text-align: center;
+      padding: 4px 0;
+    }
+
+    /* divider between sessions */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 4px 0;
+    }
+
+    /* ── input bar ── */
+    #input-bar {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      padding: 10px 12px;
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+
+    #msg-input {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 10px 16px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    #msg-input:focus {
+      border-color: var(--fire);
+    }
+
+    #msg-input::placeholder {
+      color: #444;
+    }
+
+    #send-btn {
+      background: var(--fire);
+      border: none;
+      border-radius: 50%;
+      width: 42px;
+      height: 42px;
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #send-btn:active { background: var(--gold); }
+
+    /* nick modal */
+    #nick-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 24px;
+    }
+
+    #nick-modal.hidden { display: none; }
+
+    .modal-box {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    .modal-box h2 {
+      color: var(--gold);
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .modal-box p {
+      color: var(--dim);
+      font-size: 0.85rem;
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+
+    .modal-box input {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+      outline: none;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .modal-box input:focus { border-color: var(--fire); }
+
+    .modal-box button {
+      width: 100%;
+      background: var(--fire);
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 1rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- nick picker -->
+  <div id="nick-modal">
+    <div class="modal-box">
+      <h2>Enter the Hall of Fire</h2>
+      <p>All are welcome at the table of Elrond.<br>Speak freely.</p>
+      <input id="nick-input" type="text" placeholder="your name" maxlength="32" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <button id="nick-btn">Enter</button>
+    </div>
+  </div>
+
+  <header>
+    <h1>
+      <span id="status-dot" class="disconnected"></span>
+      Hall of Fire
+    </h1>
+    <p id="status-text">connecting…</p>
+  </header>
+
+  <div id="messages"></div>
+
+  <div id="input-bar">
+    <input id="msg-input" type="text" placeholder="speak freely…" autocomplete="off" autocorrect="off" autocapitalize="off">
+    <button id="send-btn">➤</button>
+  </div>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const WS_PORT = params.get("ws_port") || 8765;
+  const ROOM    = params.get("room") || "hall-of-fire";
+
+  let nick = localStorage.getItem("rrc_nick") || "";
+  let ws   = null;
+
+  // ── nick modal ──
+  const nickModal = document.getElementById("nick-modal");
+  const nickInput = document.getElementById("nick-input");
+  const nickBtn   = document.getElementById("nick-btn");
+
+  function enterWithNick() {
+    const val = nickInput.value.trim();
+    if (!val) return;
+    nick = val;
+    localStorage.setItem("rrc_nick", nick);
+    nickModal.classList.add("hidden");
+    connect();
+  }
+
+  nickBtn.addEventListener("click", enterWithNick);
+  nickInput.addEventListener("keydown", e => { if (e.key === "Enter") enterWithNick(); });
+
+  if (nick) {
+    nickInput.value = nick;
+    nickModal.classList.add("hidden");
+    connect();
+  } else {
+    nickInput.focus();
+  }
+
+  // ── websocket ──
+  function connect() {
+    setStatus("connecting", "connecting…");
+    const url = `ws://${location.hostname}:${WS_PORT}`;
+    ws = new WebSocket(url);
+
+    ws.addEventListener("open", () => {
+      // send nick to bridge (bridge currently ignores it — future: send join with nick)
+      setStatus("connecting", "joining room…");
+    });
+
+    ws.addEventListener("message", e => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === "status") {
+        setStatus("connected", msg.body);
+        addStatus(msg.body);
+      } else if (msg.type === "message") {
+        const own = msg.nick === nick;
+        addMessage(msg.nick, msg.body, own);
+      } else if (msg.type === "notice") {
+        addNotice(msg.body);
+      } else if (msg.type === "error") {
+        addNotice("⚠ " + msg.body);
+      }
+    });
+
+    ws.addEventListener("close", () => {
+      setStatus("disconnected", "disconnected — retrying…");
+      addStatus("disconnected");
+      setTimeout(connect, 3000);
+    });
+
+    ws.addEventListener("error", () => {
+      setStatus("disconnected", "connection error");
+    });
+  }
+
+  // ── send ──
+  const msgInput = document.getElementById("msg-input");
+  const sendBtn  = document.getElementById("send-btn");
+
+  function sendMessage() {
+    const body = msgInput.value.trim();
+    if (!body || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: "message", room: ROOM, body, nick }));
+    addMessage(nick, body, true);   // show immediately, don't wait for echo
+    msgInput.value = "";
+  }
+
+  sendBtn.addEventListener("click", sendMessage);
+  msgInput.addEventListener("keydown", e => { if (e.key === "Enter") sendMessage(); });
+
+  // ── DOM helpers ──
+  const feed = document.getElementById("messages");
+
+  function scrollToBottom() {
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function addMessage(nickText, body, own = false) {
+    const div = document.createElement("div");
+    div.className = "msg" + (own ? " own" : "");
+    div.innerHTML = `<span class="msg-meta"><span class="msg-nick">${esc(nickText)}</span></span>
+                     <span class="msg-body">${esc(body)}</span>`;
+    feed.appendChild(div);
+    scrollToBottom();
+  }
+
+  function addNotice(body) {
+    const div = document.createElement("div");
+    div.className = "msg notice";
+    div.innerHTML = `<span class="msg-body">${esc(body)}</span>`;
+    feed.appendChild(div);
+    scrollToBottom();
+  }
+
+  function addStatus(body) {
+    const div = document.createElement("div");
+    div.className = "msg status";
+    div.innerHTML = `<span class="msg-body">— ${esc(body)} —</span>`;
+    feed.appendChild(div);
+    scrollToBottom();
+  }
+
+  function setStatus(state, text) {
+    const dot = document.getElementById("status-dot");
+    const txt = document.getElementById("status-text");
+    dot.className = state;
+    txt.textContent = text;
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+</script>
+</body>
+</html>

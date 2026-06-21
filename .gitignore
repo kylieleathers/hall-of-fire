@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Reticulum / RRC identities — never commit private keys
+.rrc_client_identity
+.rrc_bridge_identity
+.rrc_poc_identity
+*.identity
+
+# Reticulum config (machine-specific, contains shared instance config)
+.reticulum/

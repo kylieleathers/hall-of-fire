@@ -93,7 +93,6 @@ These are generated on first run and are **not** committed to git — they're
 your private Reticulum keys.
 
 ## Ideas for future features
-
 - Multi-room support in the web UI (room switcher instead of one fixed room)
 - Persistent scrollback (store recent messages so a reload doesn't lose history)
 - Typing indicators / read receipts via lightweight RRC notices
